@@ -7,6 +7,7 @@ CPPFLAGS = -I/opt/homebrew/opt/libomp/include -fopenmp
 LDFLAGS = -L/opt/homebrew/opt/libomp/lib
 else
 $(info makefile: no arm64 detected, preserving defaults)
+CPPFLAGS = -fopenmp
 # leave defaults
 endif
 
@@ -14,7 +15,7 @@ prefix_sums: prefix_sums.c
 	$(CPP) $(CPPFLAGS) $^ -o $@ $(LDFLAGS)
 
 sample_omp.out:sample_omp.c
-	gcc -fopenmp $^ -o $@
+	$(CPP) $(CPPFLAGS) $^ -o $@ $(LDFLAGS)
 
 clean:
 	rm *.o
