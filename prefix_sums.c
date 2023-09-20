@@ -15,6 +15,7 @@
 #include <time.h>
 #include <omp.h>
 
+void print_arr(int* array, int size);
 void prefix_sums_recur(int* array, int start, int end);
 void prefix_sums_tree(int* array, int end);
 void _upsweep(int* array, int n);
@@ -62,19 +63,23 @@ int main(int argc, char* argv[])
         }
         printf ("done.\n");
 
+        print_arr(prefixArr1, setSize);
         printf ("* prefix_sums_recur ... ");
         timer = clock();
         prefix_sums_recur(prefixArr1,0,setSize);
         timer = clock() - timer;
         recurTime = ((double)timer)/CLOCKS_PER_SEC;
         printf ("time: %f\n", recurTime);
+        print_arr(prefixArr1, setSize);
 
+        print_arr(prefixArr2, setSize);
         printf ("* prefix_sums_tree ... ");
         timer = clock();
         prefix_sums_tree(prefixArr2,setSize);
         timer = clock() - timer;
         treeTime = ((double)timer)/CLOCKS_PER_SEC;
         printf ("time: %f\n", treeTime);
+        print_arr(prefixArr2, setSize);
 
         printf ("* writing data ... ");
         fprintf(outputCSV, "%d,%f,%f\n",maxProblemSize,recurTime,treeTime);
@@ -82,6 +87,13 @@ int main(int argc, char* argv[])
     }
     fclose(outputCSV);
     return 0;
+}
+
+void print_arr(int* array, int size)
+{
+    for (int i = 0; i < size; i++)
+        printf ("%d ", array[i]);
+    printf ("\n");
 }
 
 void prefix_sums_recur(int* array, int start, int end)
