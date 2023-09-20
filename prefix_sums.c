@@ -8,18 +8,20 @@
  * rithm is paralellized             *
  *                                   *
  * Requires: stdio.h, math.h, omp.h, *
- * time.h and prefix_func.h          *
+ * time.h, stdlib.h, stdint.h        *
  *************************************/
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <math.h> //For log
 #include <time.h>
 #include <omp.h>
 
-void print_arr(int* array, int size);
-void prefix_sums_recur(int* array, int start, int end);
-void prefix_sums_tree(int* array, int end);
-void _upsweep(int* array, int n);
-void _downsweep(int* array, int n);
+void print_arr(uint64_t* array, int size);
+void prefix_sums_recur(uint64_t* array, int start, int end);
+void prefix_sums_tree(uint64_t* array, int n);
+void _upsweep(uint64_t* array, int n);
+void _downsweep(uint64_t* array, int n);
 
 int main(int argc, char* argv[])
 {
@@ -48,55 +50,69 @@ int main(int argc, char* argv[])
     }
 
     printf ("RUN: Output file set as %s, beginning prefix scan up to %d...\n", outputFileString, maxProblemSize);
-
+    fprintf (outputCSV, "# Intel i9-13900k, 32 cores @ 5.5GHz / 128GB RAM\n");
+    fprintf (outputCSV, "# ProbSize, Recursive, Tree,\n");
     //skip 0
     for (int probIndex = 1; probIndex <= maxProblemSize; probIndex++)
     {
         printf ("RUN: Generating dataset (2^%d) ... ", probIndex);
-        unsigned int setSize = (int)(pow(2, probIndex));
-        int prefixArr1[setSize];
-        int prefixArr2[setSize];
-        for (int arrIndex = 0; arrIndex < setSize; arrIndex++)
+        uint64_t setSize = (uint64_t)(pow(2, probIndex));
+        // dynamically allocate a heap for the dataset
+        // malloc is used here over calloc to save clock cycles, as the array is immediately populated.
+        uint64_t* prefixArr= (uint64_t*)malloc(setSize * sizeof(uint64_t));
+        for (uint64_t arrIndex = 0; arrIndex < setSize; arrIndex++)
         {
-            prefixArr1[arrIndex]=arrIndex+1;
-            prefixArr2[arrIndex]=arrIndex+1;
+            prefixArr[arrIndex]=arrIndex+1;
         }
         printf ("done.\n");
 
-        print_arr(prefixArr1, setSize);
+        //print_arr(prefixArr, setSize);
         printf ("* prefix_sums_recur ... ");
         timer = clock();
-        prefix_sums_recur(prefixArr1,0,setSize);
+        prefix_sums_recur(prefixArr,0,setSize);
         timer = clock() - timer;
         recurTime = ((double)timer)/CLOCKS_PER_SEC;
         printf ("time: %f\n", recurTime);
-        print_arr(prefixArr1, setSize);
-
-        print_arr(prefixArr2, setSize);
+        //print_arr(prefixArr, setSize);
+        
+        //reset arr for next function
+        printf ("* reinitializing dataset ... ");
+        for (uint64_t arrIndex = 0; arrIndex < setSize; arrIndex++)
+        {
+            prefixArr[arrIndex]=arrIndex+1;
+        }
+        printf ("done.\n");
+        //print_arr(prefixArr, setSize);
         printf ("* prefix_sums_tree ... ");
         timer = clock();
-        prefix_sums_tree(prefixArr2,setSize);
+        prefix_sums_tree(prefixArr,setSize);
         timer = clock() - timer;
         treeTime = ((double)timer)/CLOCKS_PER_SEC;
         printf ("time: %f\n", treeTime);
-        print_arr(prefixArr2, setSize);
+        //print_arr(prefixArr, setSize);
 
         printf ("* writing data ... ");
-        fprintf(outputCSV, "%d,%f,%f\n",maxProblemSize,recurTime,treeTime);
+        fprintf(outputCSV, "%d,%f,%f\n",probIndex,recurTime,treeTime);
         printf ("done.\n");
+
+        printf("* freeing dataset ... ");
+        free(prefixArr);
+        printf("done.\n");
     }
+    printf("RUN: Closing file ... ");
     fclose(outputCSV);
+    printf("done.\n");
     return 0;
 }
 
-void print_arr(int* array, int size)
+void print_arr(uint64_t* array, int size)
 {
     for (int i = 0; i < size; i++)
         printf ("%d ", array[i]);
     printf ("\n");
 }
 
-void prefix_sums_recur(int* array, int start, int end)
+void prefix_sums_recur(uint64_t* array, int start, int end)
 {
     if (start >= end) return;
     int mid = (start + end) / 2;
@@ -115,15 +131,11 @@ void prefix_sums_recur(int* array, int start, int end)
         }
 }
 
-void prefix_sums_tree(int* array, int end)
+void prefix_sums_tree(uint64_t* array, int n)
 {
-    _upsweep(array, end);
-    _downsweep(array,end);
-}
-void _upsweep(int* array, int n)
-{
-    int power = log2(n-1);
-    for (int d = 0; d < power; d++)
+    //upsweep
+    int power = log2(n);
+    for (int d = 0; d < power-1; d++)
     {
         int power2pl = (int)(pow(2, d+1));
         int power2 = (int)(pow(2, d));
@@ -131,12 +143,10 @@ void _upsweep(int* array, int n)
             for (int k = 0; k < n; k += power2pl)
                 array[k+power2pl-1]=array[k+power2-1]+array[k+power2pl-1];
     }
-}
-void _downsweep(int* array, int n)
-{
-    int power = log2(n-1);
+
+    //downsweep
     array[n-1] = 0;
-    for (int d = 0; d > power; d--)
+    for (int d = power-1; d >= 0; d--)
     {
         int power2pl = (int)(pow(2, d+1));
         int power2 = (int)(pow(2, d));
@@ -149,3 +159,38 @@ void _downsweep(int* array, int n)
             }
     }
 }
+
+// void prefix_sums_tree(uint64_t* array, int end)
+// {
+//     _upsweep(array, end);
+//     _downsweep(array,end);
+// }
+// void _upsweep(uint64_t* array, int n)
+// {
+//     int power = log2(n-1);
+//     for (int d = 0; d < power; d++)
+//     {
+//         int power2pl = (int)(pow(2, d+1));
+//         int power2 = (int)(pow(2, d));
+//         #pragma omp parallel for
+//             for (int k = 0; k < n; k += power2pl)
+//                 array[k+power2pl-1]=array[k+power2-1]+array[k+power2pl-1];
+//     }
+// }
+// void _downsweep(uint64_t* array, int n)
+// {
+//     int power = log2(n-1);
+//     array[n-1] = 0;
+//     for (int d = 0; d > power; d--)
+//     {
+//         int power2pl = (int)(pow(2, d+1));
+//         int power2 = (int)(pow(2, d));
+//         #pragma omp parallel for
+//             for (int k = 0; k < n; k+=power2pl)
+//             {
+//                 int t = array[k+power2-1];
+//                 array[k+power2-1] = array[k+power2pl-1];
+//                 array[k+power2pl-1] = t+array[k+power2pl-1];
+//             }
+//     }
+// }
