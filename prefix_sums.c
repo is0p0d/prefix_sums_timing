@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
     {
         printf ("RUN: Generating dataset (2^%d) ... ", probIndex);
         uint64_t setSize = (uint64_t)(pow(2, probIndex));
+        printf ("\naloc_prefixArr ptr: %p\n", (void *) &prefixArr);
         // dynamically allocate a heap for the dataset
         // malloc is used here over calloc to save clock cycles, as the array is immediately populated.
         prefixArr = (uint64_t*)malloc(setSize * sizeof(uint64_t));
@@ -70,16 +71,18 @@ int main(int argc, char* argv[])
         {
             prefixArr[arrIndex]=arrIndex+1;
         }
+        printf ("\ninit_prefixArr ptr: %p\n", (void *) &prefixArr);
         printf ("done.\n");
 
-        print_arr(prefixArr, setSize);
+        //print_arr(prefixArr, setSize);
         printf ("* prefix_sums_recur ... ");
         timer = clock();
         prefix_sums_recur(prefixArr,0,setSize);
+        printf ("\nprcr_prefixArr ptr: %p\n", (void *) &prefixArr);
         timer = clock() - timer;
         recurTime = ((double)timer)/CLOCKS_PER_SEC;
         printf ("time: %f\n", recurTime);
-        print_arr(prefixArr, setSize);
+        //print_arr(prefixArr, setSize);
         
         //reset arr for next function
         printf ("* reinitializing dataset ... ");
@@ -88,20 +91,22 @@ int main(int argc, char* argv[])
             prefixArr[arrIndex]=arrIndex+1;
         }
         printf ("done.\n");
-        print_arr(prefixArr, setSize);
+        //print_arr(prefixArr, setSize);
         printf ("* prefix_sums_tree ... ");
         timer = clock();
         prefix_sums_tree(prefixArr,setSize);
+        printf ("\nprst_prefixArr ptr: %p\n", (void *) &prefixArr);
         timer = clock() - timer;
         treeTime = ((double)timer)/CLOCKS_PER_SEC;
         printf ("time: %f\n", treeTime);
-        print_arr(prefixArr, setSize);
+        //print_arr(prefixArr, setSize);
 
         printf ("* writing data ... ");
         fprintf(outputCSV, "%d,%f,%f\n",probIndex,recurTime,treeTime);
         printf ("done.\n");
 
         printf("* freeing dataset ... ");
+        printf ("\nfree_prefixArr ptr: %p\n", (void *) &prefixArr);
         free(prefixArr);
         printf("done.\n");
     }
@@ -120,7 +125,7 @@ void print_arr(uint64_t* array, uint64_t size)
 
 void prefix_sums_recur(uint64_t* array, uint64_t start, uint64_t end)
 {
-    printf ("** prefix_sums_recur start, end: %d, %d\n", start, end);
+    //printf ("** prefix_sums_recur start, end: %d, %d\n", start, end);
     if (start >= end) return;
     uint64_t mid = (start + end) / 2;
     #pragma omp parallel sections num_threads(2)
