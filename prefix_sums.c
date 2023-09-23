@@ -17,11 +17,11 @@
 #include <time.h>
 #include <omp.h>
 
-void print_arr(uint64_t* array, int size);
-void prefix_sums_recur(uint64_t* array, int start, int end);
-void prefix_sums_tree(uint64_t* array, int n);
-void _upsweep(uint64_t* array, int n);
-void _downsweep(uint64_t* array, int n);
+void print_arr(uint64_t* array, uint64_t size);
+void prefix_sums_recur(uint64_t* array, uint64_t start, uint64_t end);
+void prefix_sums_tree(uint64_t* array, uint64_t n);
+void _upsweep(uint64_t* array, uint64_t n);
+void _downsweep(uint64_t* array, uint64_t n);
 
 int main(int argc, char* argv[])
 {
@@ -33,11 +33,12 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    int maxProblemSize = atoi(argv[1]);
+    uint64_t maxProblemSize = atoi(argv[1]);
     char *outputFileString = argv[2];
-    FILE *outputCSV;
+    FILE *outputCSV = NULL;
     clock_t timer;
-    int currProblemSize = 0;
+    uint64_t* prefixArr = NULL;
+    uint64_t currProblemSize = 0;
     double recurTime = 0.0;
     double treeTime = 0.0;
 
@@ -53,16 +54,20 @@ int main(int argc, char* argv[])
     fprintf (outputCSV, "# Intel i9-13900k, 32 cores @ 5.5GHz / 128GB RAM\n");
     fprintf (outputCSV, "# ProbSize, Recursive, Tree,\n");
     //skip 0
-    for (int probIndex = 1; probIndex <= maxProblemSize; probIndex++)
+    for (uint64_t probIndex = 1; probIndex <= maxProblemSize; probIndex++)
     {
         printf ("RUN: Generating dataset (2^%d) ... ", probIndex);
         uint64_t setSize = (uint64_t)(pow(2, probIndex));
         // dynamically allocate a heap for the dataset
         // malloc is used here over calloc to save clock cycles, as the array is immediately populated.
-        uint64_t* prefixArr= (uint64_t*)malloc(setSize * sizeof(uint64_t));
+        prefixArr = (uint64_t*)malloc(setSize * sizeof(uint64_t));
+        if (prefixArr == NULL)
+        {
+            printf ("ERROR: Could not allocate memory!");
+            return 1;
+        }
         for (uint64_t arrIndex = 0; arrIndex < setSize; arrIndex++)
         {
-            prefixArr[arrIndex]=arrIndex+1;
         }
         printf ("done.\n");
 
@@ -105,17 +110,17 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void print_arr(uint64_t* array, int size)
+void print_arr(uint64_t* array, uint64_t size)
 {
-    for (int i = 0; i < size; i++)
+    for (uint64_t i = 0; i < size; i++)
         printf ("%d ", array[i]);
     printf ("\n");
 }
 
-void prefix_sums_recur(uint64_t* array, int start, int end)
+void prefix_sums_recur(uint64_t* array, uint64_t start, uint64_t end)
 {
     if (start >= end) return;
-    int mid = (start + end) / 2;
+    uint64_t mid = (start + end) / 2;
     #pragma omp parallel sections num_threads(2)
     {
         #pragma omp section
@@ -125,70 +130,70 @@ void prefix_sums_recur(uint64_t* array, int start, int end)
     }
 
     #pragma omp parallel for
-        for (int k = mid+1; k <= end; k++)
+        for (uint64_t k = mid+1; k <= end; k++)
         {
             array[k] = array[k]+array[mid];
         }
 }
 
-void prefix_sums_tree(uint64_t* array, int n)
+void prefix_sums_tree(uint64_t* array, uint64_t n)
 {
     //upsweep
-    int power = log2(n);
-    for (int d = 0; d < power-1; d++)
+    uint64_t power = log2(n);
+    for (uint64_t d = 0; d < power-1; d++)
     {
-        int power2pl = (int)(pow(2, d+1));
-        int power2 = (int)(pow(2, d));
+        uint64_t power2pl = (uint64_t)(pow(2, d+1));
+        uint64_t power2 = (uint64_t)(pow(2, d));
         #pragma omp parallel for
-            for (int k = 0; k < n; k += power2pl)
+            for (uint64_t k = 0; k < n; k += power2pl)
                 array[k+power2pl-1]=array[k+power2-1]+array[k+power2pl-1];
     }
 
     //downsweep
     array[n-1] = 0;
-    for (int d = power-1; d >= 0; d--)
+    for (uint64_t d = power-1; d >= 0; d--)
     {
-        int power2pl = (int)(pow(2, d+1));
-        int power2 = (int)(pow(2, d));
+        uint64_t power2pl = (uint64_t)(pow(2, d+1));
+        uint64_t power2 = (uint64_t)(pow(2, d));
         #pragma omp parallel for
-            for (int k = 0; k < n; k+=power2pl)
+            for (uint64_t k = 0; k < n; k+=power2pl)
             {
-                int t = array[k+power2-1];
+                uint64_t t = array[k+power2-1];
                 array[k+power2-1] = array[k+power2pl-1];
                 array[k+power2pl-1] = t+array[k+power2pl-1];
             }
     }
 }
 
-// void prefix_sums_tree(uint64_t* array, int end)
+// void prefix_sums_tree(uint64_t* array, uint64_t end)
 // {
 //     _upsweep(array, end);
 //     _downsweep(array,end);
 // }
-// void _upsweep(uint64_t* array, int n)
+// void _upsweep(uint64_t* array, uint64_t n)
 // {
-//     int power = log2(n-1);
-//     for (int d = 0; d < power; d++)
+//     uint64_t power = log2(n-1);
+//     for (uint64_t d = 0; d < power; d++)
 //     {
-//         int power2pl = (int)(pow(2, d+1));
-//         int power2 = (int)(pow(2, d));
+//         uint64_t power2pl = (uint64_t)(pow(2, d+1));
+//         uint64_t power2 = (uint64_t)(pow(2, d));
 //         #pragma omp parallel for
-//             for (int k = 0; k < n; k += power2pl)
+//             for (uint64_t k = 0; k < n; k += power2pl)
 //                 array[k+power2pl-1]=array[k+power2-1]+array[k+power2pl-1];
 //     }
 // }
-// void _downsweep(uint64_t* array, int n)
+// void _downsweep(uint64_t* array, uint64_t n)
 // {
-//     int power = log2(n-1);
+//     uint64_t power = log2(n-1);
 //     array[n-1] = 0;
-//     for (int d = 0; d > power; d--)
+//     for (uint64_t d = 0; d > power; d--)
 //     {
-//         int power2pl = (int)(pow(2, d+1));
-//         int power2 = (int)(pow(2, d));
+//         uint64_t power2pl = (uint64_t)(pow(2, d+1));
+//         uint64_t power2 = (uint64_t)(pow(2, d));
 //         #pragma omp parallel for
-//             for (int k = 0; k < n; k+=power2pl)
+//             for (uint64_t k = 0; k < n; k+=power2pl)
 //             {
-//                 int t = array[k+power2-1];
+//                 uint64_t t = array[k+power2-1];
 //                 array[k+power2-1] = array[k+power2pl-1];
 //                 array[k+power2pl-1] = t+array[k+power2pl-1];
 //             }
