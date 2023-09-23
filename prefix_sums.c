@@ -58,7 +58,6 @@ int main(int argc, char* argv[])
     {
         printf ("RUN: Generating dataset (2^%d) ... ", probIndex);
         uint64_t setSize = (uint64_t)(pow(2, probIndex));
-        printf ("\naloc_prefixArr ptr: %p\n", (void *) &prefixArr);
         // dynamically allocate a heap for the dataset
         // malloc is used here over calloc to save clock cycles, as the array is immediately populated.
         prefixArr = (uint64_t*)malloc(setSize * sizeof(uint64_t));
@@ -71,14 +70,12 @@ int main(int argc, char* argv[])
         {
             prefixArr[arrIndex]=arrIndex+1;
         }
-        printf ("\ninit_prefixArr ptr: %p\n", (void *) &prefixArr);
         printf ("done.\n");
 
         //print_arr(prefixArr, setSize);
         printf ("* prefix_sums_recur ... ");
         timer = clock();
-        prefix_sums_recur(prefixArr,0,setSize);
-        printf ("\nprcr_prefixArr ptr: %p\n", (void *) &prefixArr);
+        prefix_sums_recur(prefixArr,0,setSize-1);
         timer = clock() - timer;
         recurTime = ((double)timer)/CLOCKS_PER_SEC;
         printf ("time: %f\n", recurTime);
@@ -95,7 +92,6 @@ int main(int argc, char* argv[])
         printf ("* prefix_sums_tree ... ");
         timer = clock();
         prefix_sums_tree(prefixArr,setSize);
-        printf ("\nprst_prefixArr ptr: %p\n", (void *) &prefixArr);
         timer = clock() - timer;
         treeTime = ((double)timer)/CLOCKS_PER_SEC;
         printf ("time: %f\n", treeTime);
@@ -106,7 +102,6 @@ int main(int argc, char* argv[])
         printf ("done.\n");
 
         printf("* freeing dataset ... ");
-        printf ("\nfree_prefixArr ptr: %p\n", (void *) &prefixArr);
         free(prefixArr);
         printf("done.\n");
     }
