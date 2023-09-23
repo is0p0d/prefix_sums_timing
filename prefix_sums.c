@@ -68,17 +68,18 @@ int main(int argc, char* argv[])
         }
         for (uint64_t arrIndex = 0; arrIndex < setSize; arrIndex++)
         {
+            prefixArr[arrIndex]=arrIndex+1;
         }
         printf ("done.\n");
 
-        //print_arr(prefixArr, setSize);
+        print_arr(prefixArr, setSize);
         printf ("* prefix_sums_recur ... ");
         timer = clock();
         prefix_sums_recur(prefixArr,0,setSize);
         timer = clock() - timer;
         recurTime = ((double)timer)/CLOCKS_PER_SEC;
         printf ("time: %f\n", recurTime);
-        //print_arr(prefixArr, setSize);
+        print_arr(prefixArr, setSize);
         
         //reset arr for next function
         printf ("* reinitializing dataset ... ");
@@ -87,14 +88,14 @@ int main(int argc, char* argv[])
             prefixArr[arrIndex]=arrIndex+1;
         }
         printf ("done.\n");
-        //print_arr(prefixArr, setSize);
+        print_arr(prefixArr, setSize);
         printf ("* prefix_sums_tree ... ");
         timer = clock();
         prefix_sums_tree(prefixArr,setSize);
         timer = clock() - timer;
         treeTime = ((double)timer)/CLOCKS_PER_SEC;
         printf ("time: %f\n", treeTime);
-        //print_arr(prefixArr, setSize);
+        print_arr(prefixArr, setSize);
 
         printf ("* writing data ... ");
         fprintf(outputCSV, "%d,%f,%f\n",probIndex,recurTime,treeTime);
@@ -119,6 +120,7 @@ void print_arr(uint64_t* array, uint64_t size)
 
 void prefix_sums_recur(uint64_t* array, uint64_t start, uint64_t end)
 {
+    printf ("** prefix_sums_recur start, end: %d, %d\n", start, end);
     if (start >= end) return;
     uint64_t mid = (start + end) / 2;
     #pragma omp parallel sections num_threads(2)
@@ -151,7 +153,7 @@ void prefix_sums_tree(uint64_t* array, uint64_t n)
 
     //downsweep
     array[n-1] = 0;
-    for (uint64_t d = power-1; d >= 0; d--)
+    for (uint64_t d = power-1; d > 0; d--)
     {
         uint64_t power2pl = (uint64_t)(pow(2, d+1));
         uint64_t power2 = (uint64_t)(pow(2, d));
