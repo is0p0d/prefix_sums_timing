@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
     fprintf (outputCSV, "# Intel i9-13900k, 32 cores @ 5.5GHz / 128GB RAM\n");
     fprintf (outputCSV, "# ProbSize, Recursive, Tree,\n");
     //skip 0
-    for (uint64_t probIndex = 1; probIndex <= maxProblemSize; probIndex++)
+    for (uint64_t probIndex = 2; probIndex <= maxProblemSize; probIndex++)
     {
         printf ("RUN: Generating dataset (2^%d) ... ", probIndex);
         uint64_t setSize = (uint64_t)(pow(2, probIndex));
@@ -141,29 +141,33 @@ void prefix_sums_recur(uint64_t* array, uint64_t start, uint64_t end)
 void prefix_sums_tree(uint64_t* array, uint64_t n)
 {
     //upsweep
-    uint64_t power = log2(n);
-    for (uint64_t d = 0; d < power-1; d++)
+    uint64_t expon = (uint64_t)log2(n);
+
+    if (expon == 0) return;
+    for (uint64_t d = 0; d < (expon-1); d++)
     {
         uint64_t power2pl = (uint64_t)(pow(2, d+1));
         uint64_t power2 = (uint64_t)(pow(2, d));
         #pragma omp parallel for
-            for (uint64_t k = 0; k < n; k += power2pl)
-                array[k+power2pl-1]=array[k+power2-1]+array[k+power2pl-1];
+            for (uint64_t i = 0; i < n; i += power2pl)
+                array[i+power2pl-1]=array[i+power2-1]+array[i+power2pl-1];
     }
 
     //downsweep
     array[n-1] = 0;
-    for (uint64_t d = power-1; d > 0; d--)
+    for (uint64_t d = (expon-1); d >= 0;)
     {
         uint64_t power2pl = (uint64_t)(pow(2, d+1));
         uint64_t power2 = (uint64_t)(pow(2, d));
         #pragma omp parallel for
-            for (uint64_t k = 0; k < n; k+=power2pl)
+            for (uint64_t i = 0; i < n; i+=power2pl)
             {
-                uint64_t t = array[k+power2-1];
-                array[k+power2-1] = array[k+power2pl-1];
-                array[k+power2pl-1] = t+array[k+power2pl-1];
+                uint64_t t = array[i+power2-1];
+                array[i+power2-1] = array[i+power2pl-1];
+                array[i+power2pl-1] = t+array[i+power2pl-1];
             }
+        if (d == 0) return; //unsigned int 
+        d--;
     }
 }
 
